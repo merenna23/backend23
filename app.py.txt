@@ -1,39 +1,35 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, render_template
 import openai
+from flask_cors import CORS
+import os
 
 app = Flask(__name__)
-app.secret_key = 'chave_secreta'  # Necessária para usar sessões
+CORS(app)
 
-# Coloque sua chave da OpenAI aqui
-openai.api_key = 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+# 🔑 Coloque sua chave secreta aqui
+openai.api_key = "sk-...aeoA"
 
-# Rota para a raiz
 @app.route('/')
-def home():
-    return "Bem-vindo à API de Chat! Envie uma mensagem para /chat."
+def index():
+    return render_template('index.html')
 
-# Rota do chat
 @app.route('/chat', methods=['POST'])
 def chat():
-    data = request.json
-    user_input = data.get('message')
+    user_input = request.json.get('message', '')
 
-    if 'name' not in session:
-        session['name'] = None
-
-    if session['name'] is None:
-        session['name'] = user_input
-        return jsonify({"text": f"Olá, {user_input}! Como posso te ajudar hoje?"})
-
-    user_name = session['name']
-    response = openai.ChatCompletion.create(
-        model="gpt-4",  # Ou use 'gpt-3.5-turbo' se não tiver acesso ao GPT-4
-        messages=[{"role": "user", "content": user_input}]
-    )
-    gpt_reply = response['choices'][0]['message']['content']
-    personalized_reply = f"{gpt_reply} (Resposta para {user_name})"
-
-    return jsonify({"text": personalized_reply})
+    try:
+        response = openai.ChatCompletion.create(
+            model='gpt-3.5-turbo',
+            messages=[
+                {"role": "system", "content": "Você é um robô simpático com rosto que responde de forma amigável."},
+                {"role": "user", "content": user_input}
+            ]
+        )
+        reply = response['choices'][0]['message']['content']
+        return jsonify({'text': reply})
+    except Exception as e:
+        return jsonify({'text': f'Erro: {str(e)}'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
